@@ -7,6 +7,7 @@ Provides functions for token creation, user authentication, and role validation.
 :module: src.security.oauth
 """
 from datetime import datetime, timezone, timedelta
+import json
 
 from sqlalchemy.orm import Session
 from authlib.jose import jwt, JoseError
@@ -14,7 +15,7 @@ from fastapi import HTTPException
 from fastapi import status
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-
+import redis
 
 import os
 from src.database.models import User, UserRole
@@ -27,6 +28,9 @@ ACCESS_TOKEN_EXPIRES_IN_MINUTES = int(
     os.getenv('ACCESS_TOKEN_EXPIRES_IN_MINUTES', '30'))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+redis_client = redis.Redis(host='localhost', port=6379,
+                           db=0, decode_responses=True)
 
 
 def create_access_token(data: dict) -> str:
@@ -66,9 +70,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         username = claims.get('sub')
         if not username:
             raise jwt_exception
+        cached = redis_client.get(f"user:{username}")
+        if cached:
+            data = json.loads(cached)
+            print("TOOK USER FROM CACHE")
+            user = User(id=data["id"], username=data["username"], role=data["role"],
+                        is_verified=data["is_verified"], avatar_url=data["avatar_url"], password="")
+            return user
         user = user_repository.get_user_by_username(db, username)
         if not user:
             raise jwt_exception
+        # Cache user for future requests
+        redis_client.set(f"user:{username}", json.dumps({
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "is_verified": user.is_verified,
+            "avatar_url": user.avatar_url
+        }), ex=3600)
         return user
     except JoseError as exc:
         raise jwt_exception from exc

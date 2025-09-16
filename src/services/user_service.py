@@ -49,7 +49,7 @@ def update_avatar(db: Session, user: User, file) -> str:
     return user.avatar_url
 
 
-def create_user(db: Session, username: str, password: str, role: UserRole) -> User:
+def create_user(db: Session, username: str, password: str, role: str) -> User:
     """
     Create a new user with the given credentials and role.
 

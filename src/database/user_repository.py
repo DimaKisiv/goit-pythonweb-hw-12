@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from src.database.models import User, UserRole
 
 
-def create_user(db: Session, username: str, hashed_password: str, role: UserRole) -> User:
+def create_user(db: Session, username: str, hashed_password: str, role: str) -> User:
     """
     Create a new user in the database.
 

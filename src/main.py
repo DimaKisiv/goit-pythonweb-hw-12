@@ -49,9 +49,6 @@ app.include_router(users.router)
 app.include_router(contacts.router)
 
 # Serve Sphinx HTML docs at /docs
-
-app = FastAPI()
-
 if os.path.isdir("docs/_build/html"):
     app.mount(
         "/docs",

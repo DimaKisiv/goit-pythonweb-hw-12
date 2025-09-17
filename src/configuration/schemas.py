@@ -51,6 +51,7 @@ class UserCreate(BaseModel):
     """
     username: str
     password: str
+    role: str = "USER"
 
 
 class UserRead(BaseModel):
@@ -61,3 +62,12 @@ class UserRead(BaseModel):
     username: str
     role: str
     model_config = ConfigDict(from_attributes=True)
+
+
+class PasswordResetRequest(BaseModel):
+    email: str
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str

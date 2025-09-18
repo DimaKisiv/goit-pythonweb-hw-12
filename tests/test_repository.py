@@ -163,4 +163,32 @@ def test_delete_contact(in_memory_db):
     assert deleted is not None
     assert contacts_repository.get_contact(db, contact.id, user.id) is None
 
-# Add more CRUD tests as needed
+
+def test_create_admin_user(in_memory_db):
+    db = in_memory_db
+    username = "adminrepo@example.com"
+    password = passwords.get_password_hash("adminpass")
+    user = user_repository.create_user(db, username, password, UserRole.ADMIN)
+    assert user.role == UserRole.ADMIN
+
+
+def test_password_reset(in_memory_db):
+    db = in_memory_db
+    username = "resetrepo@example.com"
+    password = passwords.get_password_hash("oldpass")
+    user = user_repository.create_user(db, username, password, UserRole.USER)
+    user.password = passwords.get_password_hash("newpass")
+    db.commit()
+    updated = user_repository.get_user_by_username(db, username)
+    assert passwords.verify_password("newpass", updated.password)
+
+
+def test_email_verification_flag(in_memory_db):
+    db = in_memory_db
+    username = "verifyrepo@example.com"
+    password = passwords.get_password_hash("verifypass")
+    user = user_repository.create_user(db, username, password, UserRole.USER)
+    user.is_verified = True
+    db.commit()
+    verified = user_repository.get_user_by_username(db, username)
+    assert verified.is_verified is True

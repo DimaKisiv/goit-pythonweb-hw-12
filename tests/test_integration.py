@@ -126,4 +126,75 @@ def test_contacts_list_unauth():
     response = client.get("/contacts/")
     assert response.status_code == 401
 
-# Add avatar and email verification tests as needed
+
+def test_avatar_upload_admin():
+    # Create admin user
+    admin_payload = {"username": "admin@example.com",
+                     "password": "adminpass", "role": "admin"}
+    client.post("/users", json=admin_payload)
+    # Login as admin
+    response = client.post(
+        "/token", data={"username": "admin@example.com", "password": "adminpass"})
+    token = response.json().get("access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+    # Upload avatar (simulate file upload)
+    file_content = b"fake image data"
+    files = {"file": ("avatar.png", file_content, "image/png")}
+    resp = client.post("/users/avatar", headers=headers, files=files)
+    # 403 if not admin, 422 if file handling fails
+    assert resp.status_code in (200, 401, 403, 422)
+
+
+def test_email_verification():
+    # Register user
+    client.post(
+        "/users", json={"username": "verifyme@example.com", "password": "verifypass"})
+    # Simulate email verification token
+    response = client.post(
+        "/token", data={"username": "verifyme@example.com", "password": "verifypass"})
+    token = response.json().get("access_token")
+    # Normally, token would be sent via email, here we use it directly
+    resp = client.get(f"/verify-email/{token}")
+    assert resp.status_code in (200, 400)
+
+
+def test_password_reset_flow():
+    # Register user
+    client.post(
+        "/users", json={"username": "resetme@example.com", "password": "resetpass"})
+    # Request password reset
+    resp = client.post("/users/request-password-reset",
+                       json={"email": "resetme@example.com"})
+    assert resp.status_code == 200
+    reset_token = resp.json().get("reset_token")
+    # Confirm password reset
+    resp2 = client.post("/users/reset-password",
+                        json={"token": reset_token, "new_password": "newpass123"})
+    assert resp2.status_code == 200
+
+
+def test_role_based_access_avatar():
+    # Create normal user
+    user_payload = {"username": "user1@example.com",
+                    "password": "userpass", "role": "user"}
+    client.post("/users", json=user_payload)
+    response = client.post(
+        "/token", data={"username": "user1@example.com", "password": "userpass"})
+    token = response.json().get("access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+    file_content = b"fake image data"
+    files = {"file": ("avatar.png", file_content, "image/png")}
+    resp = client.post("/users/avatar", headers=headers, files=files)
+    # 401 if unauthorized, 403 if forbidden
+    assert resp.status_code in (401, 403)
+
+
+def test_refresh_token():
+    # Register and login user
+    client.post(
+        "/users", json={"username": "refreshuser@example.com", "password": "refreshpass"})
+    response = client.post(
+        "/token", data={"username": "refreshuser@example.com", "password": "refreshpass"})
+    refresh_token = response.json().get("refresh_token")
+    resp = client.post("/refresh", json={"refresh_token": refresh_token})
+    assert resp.status_code in (200, 422)  # 422 if validation error

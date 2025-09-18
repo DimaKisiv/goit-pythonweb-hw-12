@@ -1,13 +1,11 @@
 """
 Integration tests for FastAPI routes using pytest and TestClient.
 """
-import os
+import pytest
 from fastapi.testclient import TestClient
 from src.main import app
 from src.configuration.schemas import ContactCreate
 
-# Force in-memory SQLite for tests
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 client = TestClient(app)
 
 
